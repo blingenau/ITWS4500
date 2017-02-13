@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Lab2</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="lab2.css">
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                <p class="text-center lead"><strong>Right Now</strong></p>
+                <div id="forecast-today" class="row">
+                    <div id="temp-today" class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+
+                    </div>
+                    <div id="weather-today" class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+                <p class="text-center lead"><strong>Forecast</strong></p>
+                <div id="forecast">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script>
+        var apiKey = "a9683212f22c945ba9881c9b5e232a04";
+
+        function createWeather(weatherIcon, city, humidity, temp, weather, windSpeed) {
+            var tempToday = $("<p>").addClass("text-center temp").html(`${temp}&#8457;`);
+            var weatherToday = $("<p>").addClass("text-center").html(`${city}<br/><small>${weather}</small><br/>Wind:${windSpeed}mph<br/>Humidity:${humidity}%`);
+            $("#temp-today").append($("<img>").attr("src", `http://openweathermap.org/img/w/${weatherIcon}.png`));
+            $("#temp-today").append(tempToday);
+            $("#weather-today").append(weatherToday);
+        }
+
+        function replaceForecast(weatherIcon, city, humidity, temp, weather, windSpeed, time) {
+            var forecast = $("<div>").addClass("row slideDown").attr("id", "forecast");
+            var forecastTemp = $("<div>").addClass("col-xs-6 col-sm-6 col-md-6 col-lg-6")
+                .append($("<img>").attr("src", `http://openweathermap.org/img/w/${weatherIcon}.png`))
+                .append($("<p>").addClass("text-center temp").html(`${temp}&#8457;`));
+            var forecastWeather = $("<div>").addClass("col-xs-6 col-sm-6 col-md-6 col-lg-6")
+                .append($("<p>").addClass("text-center").html(`${city}<br/><strong>${time}</strong><br/><small>${weather}</small><br/>Wind:${windSpeed}mph<br/>Humidity:${humidity}%`));
+            forecast.append(forecastTemp).append(forecastWeather);
+            $("#forecast").replaceWith(forecast);
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                $.getJSON(`http://api.openweathermap.org/data/2.5/weather?lat=${position.coords.latitude}&lon=${position.coords.longitude}&appid=${apiKey}&units=imperial`, function(data) {
+                    createWeather(data.weather[0].icon, data.name, data.main.humidity, data.main.temp, data.weather[0].description, data.wind.speed);
+                });
+
+                $.getJSON(`http://api.openweathermap.org/data/2.5/forecast?lat=${position.coords.latitude}&lon=${position.coords.longitude}&appid=${apiKey}&units=imperial`, function(data) {
+                    var forecastList = data.list;
+                    var forecastInterval = setInterval(function() {
+                        if (forecastList.length == 0) {
+                            clearInterval(forecastInterval);
+                            return;
+                        }
+                        var forecast = forecastList.shift();
+                        replaceForecast(forecast.weather[0].icon, data.city.name, forecast.main.humidity, forecast.main.temp, forecast.weather[0].description, forecast.wind.speed, forecast.dt_txt);
+                    }, 3000);
+                });
+            });
+        }
+
+    </script>
+</body>
+
+</html>

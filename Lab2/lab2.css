@@ -1,0 +1,41 @@
+#forecast-today {
+    border-style: solid;
+    border-color: black;
+    border-radius: 4px;
+    border-width: 2px;
+}
+
+.temp {
+    font-size: 20px;
+}
+
+#forecast {
+    border-style: solid;
+    border-color: black;
+    border-radius: 4px;
+    border-width: 2px;
+}
+
+img {
+    display: block;
+    margin: auto;
+}
+
+.slideDown {
+    animation-name: slideDown;
+    -webkit-animation-name: slideDown;
+    animation-duration: 1s;
+    -webkit-animation-duration: 1s;
+    animation-timing-function: ease;
+    -webkit-animation-timing-function: ease;
+    visibility: visible !important;
+}
+
+@keyframes slideDown {
+    0% {
+        transform: translateY(-100%);
+    }
+    100% {
+        transform: translateY(0%);
+    }
+}

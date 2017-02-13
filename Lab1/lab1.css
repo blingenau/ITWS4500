@@ -1,0 +1,73 @@
+.user-image {
+    height: 100%;
+    
+}
+
+#feed {
+    list-style-type: none;
+    padding: 0;
+}
+
+.tweet-text {
+    overflow-wrap: break-word;
+}
+
+#hashtags {
+    list-style-type: none;
+    padding: 0;    
+}
+
+#feed-holder {
+    height: 270px;
+    /*width: 60%;*/
+    padding-right: 10%;
+    float: left;
+}
+
+#hashtag-holder {
+    height: 270px;
+    /*width: 30%;*/
+    background-color: lightskyblue;
+    float: left;
+}
+
+.hashtag {
+    height: 50px;
+    border-style: solid;
+    border-color: lightgray;
+    border-left-width: 2px;
+    border-left-width: 2px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    color: black;
+}
+
+.hashtag :first-child {
+    border-top-width: 2px;
+}
+
+.hashtag :last-child {
+    border-bottom-width: 2px;
+}
+
+.tweet {
+    height: 50px;
+    border-style: solid;
+    border-color: black;
+    border-left-width: 2px;
+    border-left-width: 2px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+}
+
+.tweet :first-child {
+    border-top-width: 2px;
+}
+
+.tweet :last-child {
+    border-bottom-width: 2px;
+}
+
+.tweet * {
+    float: left;
+}

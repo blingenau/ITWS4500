@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Lab1</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel = stylesheet href="lab1.css">
+    
+</head>
+
+<body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script>
+        var allTweets = [];
+        var allHashtags = [];
+        $.getJSON("http://localhost:8000/TwitterTweets17.json/", function(result){
+            for (var x in result) {
+                if (result[x].id !== undefined) {
+                    allTweets.push(result[x]);
+                    if (result[x].entities.hashtags.length > 0) {
+                        for (var hashtag in result[x].entities.hashtags) {
+                            if (result[x].entities.hashtags[hashtag] !== undefined) allHashtags.push(result[x].entities.hashtags[hashtag]);
+                        }
+                    }
+                }
+            }
+            
+            setInterval(function() {
+                var tweet = allTweets.shift();
+                if ($("#feed li").length == 5) {
+                    $("#feed li")[4].remove();
+                    $("#feed").prepend($("<li>").addClass("row").html($("<div>")
+                                                        .addClass("tweet row col-sm-12")
+                                                        .append($("<img>")
+                                                            .addClass("user-image col-sm-2")
+                                                            .attr("src", tweet.user.profile_background_image_url.includes("http") ? tweet.user.profile_background_image_url : "https://upload.wikimedia.org/wikipedia/en/archive/9/9f/20161107041729!Twitter_bird_logo_2012.svg"))
+                                                        .append($("<p>")
+                                                            .addClass("tweet-text col-sm-10")
+                                                            .html(tweet.text))).css("display", "none"));
+                    $("#feed :first-child").slideDown();
+                } else {
+                    $("#feed").prepend($("<li>").addClass("row").html($("<div>")
+                                            .addClass("tweet row col-sm-12")
+                                            .append($("<img>")
+                                                .addClass("user-image col-sm-2")
+                                                .attr("src", tweet.user.profile_background_image_url.includes("http") ? tweet.user.profile_background_image_url : "https://upload.wikimedia.org/wikipedia/en/archive/9/9f/20161107041729!Twitter_bird_logo_2012.svg"))
+                                            .append($("<p>")
+                                                .addClass("tweet-text col-sm-10")
+                                                .html(tweet.text))).css("display", "none"));
+                    $("#feed :first-child").slideDown();
+                }
+            }, 3000);
+            
+            setInterval(function() {
+                var hashtag = allHashtags.shift();
+                if ($("#hashtags li").length == 5) {
+                    $("#hashtags li")[4].remove();
+                    $("#hashtags").prepend($("<li>").addClass("hashtag row").html($("<p>").addClass("col-sm-12").html("#"+hashtag.text)).css("display", "none"));
+                    $("#hashtags :first-child").slideDown();
+                } else {
+                    $("#hashtags").prepend($("<li>").addClass("hashtag row").html($("<p>").addClass("col-sm-12").html("#"+hashtag.text)).css("display", "none"));
+                    $("#hashtags :first-child").slideDown();
+                }
+            }, 5000);
+        });
+        
+        
+    </script>
+    <div class="row">
+        <div id="feed-holder" class="col-sm-8">
+            <ul id="feed"></ul>
+        </div>
+        <div id="hashtag-holder" class="col-sm-4">
+            <ul id="hashtags"></ul>
+        </div>
+    </div>
+</body>
+</html>
