@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Lab4</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body ng-app="lab4" ng-controller="myController">
+    <button id="random" ng-click="randomize()" type="button">Random Pokemon</button>
+
+    <div class="container">
+        <div class="row">
+            <div id="sprite" class="col-sm-12 col-md-3">
+                <h3>{{spriteName}}</h3>
+                <img ng-src="{{spriteSrc}}">
+            </div>
+            <div id="moves" class="col-sm-12 col-md-3">
+                <h3>Moves</h3>
+                <ul id="moves-list">
+                    <li>{{move1}}</li>
+                    <li>{{move2}}</li>
+                    <li>{{move3}}</li>
+                    <li>{{move4}}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+
+    <script>
+        // Just a small capitalize function for nice looking text
+        String.prototype.capitalize = function() {
+            return this.charAt(0).toUpperCase() + this.slice(1);
+        }
+
+        var app = angular.module("lab4", []);
+
+        app.controller("myController", function($scope, $http) {
+            // When the "Random Pokemon" button is clicked, a new pokemon from the original 150 is chosen
+            $scope.randomize = function() {
+                var pokeId = Math.floor((Math.random() * 150) + 1);
+                $http.get(`http://pokeapi.co/api/v2/pokemon/${pokeId}`)
+                    .then(function(response) {
+                        var pokemon = response.data;
+                        $scope.spriteName = pokemon.name.capitalize();
+                        $scope.spriteSrc = pokemon.sprites.front_default;
+                        $scope.move1 = pokemon.moves[0].move.name.capitalize();
+                        $scope.move2 = pokemon.moves[1].move.name.capitalize();
+                        $scope.move3 = pokemon.moves[2].move.name.capitalize();
+                        $scope.move4 = pokemon.moves[3].move.name.capitalize();
+                    });
+            }
+        });
+
+    </script>
+
+</body>
+
+</html>
