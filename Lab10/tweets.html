@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" media="screen" href="css/bootstrap.min.css">
+    <script src="//code.jquery.com/jquery.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <title>Lab 10</title>
+</head>
+
+<body ng-app="lab10" ng-controller="myController">
+    <div id="notification" class="alert alert-info alert-dismissable" style="display:none">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a> Tweet file has been overwritten
+    </div>
+    <div id="notificationLoaded" class="alert alert-success alert-dismissable" style="display:none">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a> Tweets have been loaded
+    </div>
+    <form method="POST" class="form-inline" role="form" style="margin-bottom:10px">
+        <legend style="font-size:36px">Twitter Search</legend>
+
+        <div class="form-group">
+            <label for="query">Enter a Search Query:</label>
+            <input type="text" id="query" class="form-control" ng-model="query" placeholder="Search Query">
+        </div>
+        <div class="form-group">
+            <label for="query-count">Number of Queries:</label>
+            <input type="number" id="query-count" class="form-control" min="1" ng-model="queryCount">
+        </div>
+        <button type="button" class="btn btn-primary" ng-click="startQuery()" ng-disabled="checkCount()">Search</button>
+        <button type="button" class="btn btn-default" ng-click="loadToDatabase()" ng-disabled="checkIfLoaded()">Load Into Database</button>
+        <button type="button" class="btn btn-default" ng-click="getNewTweets()" ng-disabled="checkDisplayed()">Refresh Tweets</button>
+        <button type="button" class="btn btn-default" ng-click="visualize()" ng-disabled="checkIfDataLoaded()">Visualize Data</button>
+    </form>
+    <hr/>
+
+    <div class="row">
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            <select class="form-control" ng-init="exportType='JSON'" ng-model="exportType">
+                <option>JSON</option>
+                <option>CSV</option>
+                <option>XML</option>
+            </select>
+        </div>
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            <button type="button" class="btn btn-default" ng-click="export()" ng-disabled="checkIfDataLoaded()">Export</button>
+        </div>
+    </div>
+
+    <button type="button" class="btn btn-default" ng-click="resetPage()">Reset Page</button>
+    <button type="button" class="btn btn-default" ng-click="displayTweets()" ng-disabled="checkIfDataLoaded()">Display Tweets</button>
+
+    <ul class="list-group">
+        <li class="list-group-item" ng-repeat="tweet in tweets">{{tweet.user.screen_name}}: {{tweet.text}}</li>
+    </ul>
+
+    <div id="myModal" class="modal fade" role="dialog">
+        <div class="modal-dialog">
+
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Tweet Visualizations</h4>
+                </div>
+                <div id="modalBody" class="modal-body">
+                    <canvas id="chart1">
+                    </canvas>
+                    <canvas id="chart2" style="background-color:white">
+                    </canvas>
+                    <canvas id="chart3">
+                    </canvas>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <script src="js/lang.js"></script>
+
+    <script>
+        var app = angular.module("lab10", []);
+        var socket = io.connect("http://localhost:3000"); // establishes the streamed connection with our server
+
+        app.controller("myController", function ($scope, $http) {
+            $scope.tweets = []; // The array of tweets that angular populates the <ul> with
+            $scope.isLoaded = false; // Determines whether the Export button should be disabled
+            $scope.isDatabaseLoaded = false;
+            $scope.isDisplayed = false;
+
+            $scope.startQuery = function () {
+                // If the user's query isn't empty, query twitter for the keyword. Otherwise query for RPI's location
+                if ($scope.query !== "") {
+                    $http.get("/query", {
+                        params: {
+                            query: $scope.query,
+                            count: $scope.queryCount
+                        }
+                    });
+                } else {
+                    $http.get("/location", {
+                        params: {
+                            query: "-73.68,42.72,-73.67,42.73",
+                            count: $scope.queryCount
+                        }
+                    })
+                }
+                $scope.isLoaded = true;
+                $scope.isDatabaseLoaded = false;
+                angular.element("#notificationLoaded").fadeIn("slow");
+            };
+
+            $scope.checkCount = function () {
+                return isNaN($scope.queryCount) || $scope.queryCount.toString() === "";
+            };
+
+            $scope.checkDisplayed = function () {
+                return !$scope.isDisplayed;
+            };
+
+            $scope.checkIfDataLoaded = function () {
+                return !$scope.isDatabaseLoaded;
+            };
+
+            $scope.checkIfLoaded = function () {
+                return !$scope.isLoaded;
+            };
+
+            $scope.displayTweets = function () {
+                $http.get("/api/tweet")
+                    .then(function (res) {
+                        $scope.tweets = res.data.map((x) => x.tweet);
+                    });
+                $scope.isDisplayed = true;
+            };
+
+            // Emits event to server side to export tweet data
+            $scope.export = function () {
+                $scope.isLoaded = false;
+                socket.emit("export", $scope.exportType);
+            };
+
+            $scope.getNewTweets = function () {
+                $scope.startQuery();
+                $scope.loadToDatabase();
+                $scope.displayTweets();
+            };
+
+            // Loads the tweet data into the database
+            $scope.loadToDatabase = function () {
+                $scope.isDatabaseLoaded = true;
+                socket.emit("loadToDatabase");
+            };
+
+            $scope.resetPage = function () {
+                angular.element(".alert-dismissable").hide();
+                $scope.isLoaded = false;
+                $scope.isDatabaseLoaded = false;
+                $scope.isDisplayed = false;
+                $scope.query = "";
+                $scope.queryCount = NaN;
+                $scope.tweets = [];
+            };
+
+            $scope.visualize = function () {
+                // Do data stuff first
+                $http.get("/api/tweet")
+                    .then(function (res) {
+                        // Chart 1
+                        var labels1 = [];
+                        var hashtagLengths = res.data.map((x) => x.tweet.entities.hashtags.length);
+                        labels1 = hashtagLengths.filter(function (x, i) {
+                            return hashtagLengths.indexOf(x) === i;
+                        });
+                        var data1 = labels1.map((x) => {
+                            count = 0;
+                            for (var i = 0; i < hashtagLengths.length; i++) {
+                                if (x === hashtagLengths[i]) count++;
+                            }
+                            return count;
+                        });
+                        var cxt1 = $("#chart1");
+                        var chart1 = new Chart(cxt1, {
+                            type: "pie",
+                            data: {
+                                labels: labels1,
+                                datasets: [{
+                                    backgroundColor: [
+                                        "#ff531f",
+                                        "#ffb01f",
+                                        "#fff41f",
+                                        "#5aff1f",
+                                        "#1fffbc",
+                                        "#1fcbff",
+                                        "#2e1fff",
+                                        "#ff1fe9"
+                                    ],
+                                    data: data1
+                                }]
+                            },
+                            options: {
+                                title: {
+                                    display: true,
+                                    fontColor: "#ffffff",
+                                    fontSize: 24,
+                                    text: "Number of Hashtags Used"
+                                },
+                                legend: {
+                                    display: true,
+                                    labels: {
+                                        fontColor: "#ffffff"
+                                    }
+                                }
+                            }
+                        });
+
+                        // Chart 2
+                        var data2 = res.data.map(function (x) {
+                            return {
+                                "x": x.tweet.user.friends_count,
+                                "y": x.tweet.user.followers_count
+                            }
+                        });
+
+                        var cxt2 = $("#chart2");
+                        var chart2 = new Chart(cxt2, {
+                            type: "line",
+                            data: {
+                                datasets: [{
+                                    label: "Following vs Followers",
+                                    data: data2,
+                                    pointBackgroundColor: "#FFA83D",
+                                    fill: false,
+                                    showLine: false
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    xAxes: [{
+                                        type: "linear",
+                                        position: "bottom",
+                                        scaleLabel: {
+                                            display: true,
+                                            labelString: "Following",
+                                            fontColor: "#000000"
+                                        }
+                                    }],
+                                    yAxes: [{
+                                        type: "linear",
+                                        position: "left",
+                                        scaleLabel: {
+                                            display: true,
+                                            labelString: "Followers",
+                                            fontColor: "#000000"
+                                        }
+                                    }],
+                                    gridLines: {
+                                        color: "#000000"
+                                    },
+                                    ticks: {
+                                        fontColor: "#000000"
+                                    }
+                                }
+                            }
+                        });
+
+                        // Chart 3
+                        var labels3 = [];
+                        var countries = res.data.map((x) => {
+                            if (isoLangs[x.tweet.user.lang] === undefined || isoLangs[x.tweet.user.lang].name === undefined) return;
+                            return isoLangs[x.tweet.user.lang].name;
+                        });
+                        labels3 = countries.filter(function (x, i) {
+                            return countries.indexOf(x) === i;
+                        });
+                        var data3 = labels3.map((x) => {
+                            count = 0;
+                            for (var i = 0; i < countries.length; i++) {
+                                if (x === countries[i]) count++;
+                            }
+                            return count;
+                        });
+                        var cxt3 = $("#chart3");
+                        var chart3 = new Chart(cxt3, {
+                            type: "pie",
+                            data: {
+                                labels: labels3,
+                                datasets: [{
+                                    backgroundColor: [
+                                        "#ff531f",
+                                        "#ffb01f",
+                                        "#fff41f",
+                                        "#5aff1f",
+                                        "#1fffbc",
+                                        "#1fcbff",
+                                        "#2e1fff",
+                                        "#ff1fe9"
+                                    ],
+                                    data: data3
+                                }]
+                            },
+                            options: {
+                                title: {
+                                    display: true,
+                                    fontColor: "#ffffff",
+                                    fontSize: 24,
+                                    text: "Language Frequency"
+                                },
+                                legend: {
+                                    display: true,
+                                    labels: {
+                                        fontColor: "#ffffff"
+                                    }
+                                }
+                            }
+                        });
+
+                        // Show Modal
+                        $("#myModal").modal();
+                    });
+            };
+        });
+
+        // Displays notification if file is overwritten
+        socket.on("fileExists", function () {
+            angular.element("#notification").fadeIn("slow");
+        });
+    </script>
+</body>
+
+</html>

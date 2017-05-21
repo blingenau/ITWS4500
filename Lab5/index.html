@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" media="screen" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <title>Lab 5</title>
+</head>
+
+<body ng-app="lab5" ng-controller="myController">
+    <form method="POST" class="form-inline" role="form">
+        <legend>Twitter Search</legend>
+
+        <div class="form-group">
+            <label for="query">Enter a Search Query:</label>
+            <input type="text" id="query" class="form-control" ng-model="query" placeholder="Search Query">
+        </div>
+        <div class="form-group">
+            <label for="query-count">Number of Queries:</label>
+            <input type="number" id="query-count" class="form-control" min="1" ng-model="queryCount">
+        </div>
+        <button type="button" class="btn btn-default" ng-click="startQuery()" ng-disabled="checkCount()">Search</button>
+    </form>
+    <ul class="list-group">
+        <li class="list-group-item" ng-repeat="tweet in tweets">{{tweet}}</li>
+    </ul>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+
+    <script>
+        var app = angular.module("lab5", []);
+        var socket = io.connect("http://localhost:3000"); // establishes the streamed connection with our server
+
+        app.controller("myController", function($scope, $http) {
+            $scope.tweets = []; // The array of tweets that angular populates the <ul> with
+
+            $scope.startQuery = function() {
+                // If the user's query isn't empty, query twitter for the keyword. Otherwise query for RPI's location
+                if ($scope.query !== "") {
+                    $http.get("/query", {
+                        params: {
+                            query: $scope.query,
+                            count: $scope.queryCount
+                        }
+                    });
+                } else {
+                    $http.get("/location", {
+                        params: {
+                            query: "-73.68,42.72,-73.67,42.73",
+                            count: $scope.queryCount
+                        }
+                    })
+                }
+            };
+
+            $scope.checkCount = function() {
+                return isNaN($scope.queryCount) || $scope.queryCount.toString() === "";
+            };
+
+            // This is where the client code listens for the server emits. It pushes tweets into the angular model `tweets`
+            socket.on("tweet", function(tweet) {
+                $scope.$apply(function() {
+                    $scope.tweets.push(tweet);
+                });
+            });
+        });
+
+    </script>
+</body>
+
+</html>

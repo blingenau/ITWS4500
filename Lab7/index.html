@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" media="screen" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <script src="//code.jquery.com/jquery.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>    
+    <title>Lab 7</title>
+</head>
+
+<body ng-app="lab6" ng-controller="myController">
+    <div id="notification" class="alert alert-info alert-dismissable" style="display:none">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+        Tweet file has been overwritten
+    </div>
+    <div id="notificationLoaded" class="alert alert-success alert-dismissable" style="display:none">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+        Tweets have been loaded
+    </div>
+    <form method="POST" class="form-inline" role="form">
+        <legend>Twitter Search</legend>
+
+        <div class="form-group">
+            <label for="query">Enter a Search Query:</label>
+            <input type="text" id="query" class="form-control" ng-model="query" placeholder="Search Query">
+        </div>
+        <div class="form-group">
+            <label for="query-count">Number of Queries:</label>
+            <input type="number" id="query-count" class="form-control" min="1" ng-model="queryCount">
+        </div>
+        <button type="button" class="btn btn-default" ng-click="startQuery()" ng-disabled="checkCount()">Load</button>
+    </form>
+
+    <div class="row">
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            <select class="form-control" ng-init="exportType='JSON'" ng-model="exportType">
+                <option>JSON</option>
+                <option>CSV</option>
+                <option>XML</option>
+            </select>
+        </div>
+        <div class="col-xs-2 col-sm-2 col-md-2 col-lg-2">
+            <button type="button" class="btn btn-default" ng-click="export()" ng-disabled="checkIfLoaded()">Export</button>
+        </div>
+    </div>
+
+    <button type="button" class="btn btn-default" ng-click="resetPage()">Reset Page</button>
+    <button type="button" class="btn btn-default" ng-click="displayTweets()" ng-disabled="checkIfLoaded()">Display Tweets</button>
+
+    <ul class="list-group">
+        <li class="list-group-item" ng-repeat="tweet in tweets">{{tweet.user.screen_name}}: {{tweet.text}}</li>
+    </ul>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+
+    <script>
+        var app = angular.module("lab6", []);
+        var socket = io.connect("http://localhost:3000"); // establishes the streamed connection with our server
+
+        app.controller("myController", function ($scope, $http) {
+            $scope.tweets = []; // The array of tweets that angular populates the <ul> with
+            $scope.isLoaded = false; // Determines whether the Export button should be disabled
+
+            $scope.startQuery = function () {
+                // If the user's query isn't empty, query twitter for the keyword. Otherwise query for RPI's location
+                if ($scope.query !== "") {
+                    $http.get("/query", {
+                        params: {
+                            query: $scope.query,
+                            count: $scope.queryCount
+                        }
+                    });
+                } else {
+                    $http.get("/location", {
+                        params: {
+                            query: "-73.68,42.72,-73.67,42.73",
+                            count: $scope.queryCount
+                        }
+                    })
+                }
+                $scope.isLoaded = true;
+                angular.element("#notificationLoaded").fadeIn("slow");
+            };
+
+            $scope.checkCount = function () {
+                return isNaN($scope.queryCount) || $scope.queryCount.toString() === "";
+            };
+
+            $scope.checkIfLoaded = function () {
+                return !$scope.isLoaded;
+            };
+
+            $scope.displayTweets = function () {
+                $http.get("/api/tweet")
+                .then(function(res) {
+                    $scope.tweets = res.data.map((x) => x.tweet);
+                });
+            };
+
+            // Emits event to server side to export tweet data
+            $scope.export = function () {
+                $scope.isLoaded = false;
+                socket.emit("export", $scope.exportType);
+            };
+
+            $scope.resetPage = function () {
+                angular.element(".alert-dismissable").hide();
+                $scope.isLoaded = false;
+                $scope.query = "";
+                $scope.queryCount = NaN;
+            };
+        });
+
+        // Displays notification if file is overwritten
+        socket.on("fileExists", function () {
+            angular.element("#notification").fadeIn("slow");
+        });
+    </script>
+</body>
+
+</html>

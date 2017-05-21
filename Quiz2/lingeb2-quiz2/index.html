@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" media="screen" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.5/css/bootstrap.min.css">
+    <script src="//code.jquery.com/jquery.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <title>Quiz 2</title>
+</head>
+
+<body ng-app="quiz2" ng-controller="myController">
+    <div id="notification" class="alert alert-info alert-dismissable" style="display:none">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a> Data has been output to Q2Q1c-lingeb2.json
+    </div>
+    <div id="notificationLoaded" class="alert alert-success alert-dismissable" style="display:none">
+        <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a> Zip Code has been added
+    </div>
+    <form method="POST" class="form-inline" role="form">
+        <legend>Weather by Zip Code</legend>
+
+        <div class="form-group">
+            <label for="query">Enter a Zip Code:</label>
+            <input type="text" id="query" class="form-control" ng-model="query" placeholder="Zip Code">
+        </div>
+        <button type="button" class="btn btn-default" ng-click="startQuery()" ng-disabled="checkZip()">Add</button>
+        <button type="button" class="btn btn-default" ng-click="displayWeather()" ng-disabled="checkLoaded()">Display</button>
+        <button type="button" class="btn btn-default" ng-click="export()" ng-disabled="checkLoaded()">Output</button>
+    </form>
+
+
+
+    <div class="row">
+        <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+            <ul class="list-group">
+                <li class="list-group-item" ng-repeat="w in weather">{{w.location}}({{w.zipCode}}) is currently at {{w.temp}}&#8457;</li>
+            </ul>
+        </div>
+        <div class="col-xs-6 col-sm-6 col-md-6 col-lg-6">
+            <canvas id="chart">
+            </canvas>
+        </div>
+    </div>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+
+    <script>
+        var app = angular.module("quiz2", []);
+        var socket = io.connect("http://localhost:8000"); // establishes the streamed connection with our server
+        var isLoaded = false;
+
+        app.controller("myController", function ($scope, $http) {
+            $scope.weather = []; // The array of weather that angular populates the <ul> with
+
+            $scope.startQuery = function () {
+                $http.get("/query", {
+                    params: {
+                        query: $scope.query,
+                    }
+                });
+                $scope.isLoaded = true;
+                angular.element('#notificationLoaded').hide();
+                angular.element("#notificationLoaded").fadeIn("slow");
+            };
+
+            // Button enabler/disabler
+            $scope.checkLoaded = function () {
+                return !$scope.isLoaded;
+            };
+
+            // Button enabler/disabler
+            $scope.checkZip = function () {
+                return isNaN($scope.query) || $scope.query.toString() === "" || $scope.query.length != 5;
+            };
+
+            // This function not only displays the weather data as a list, but also as a bar graph
+            $scope.displayWeather = function () {
+                $http.get("/api/weather")
+                    .then(function (res) {
+                        $scope.weather = res.data.map((x) => x); // This populates the array used for the list visualization
+
+                        // Data visualization - I'm using Chart.js
+                        $("#chart").html(""); // Clear the current graph if any
+
+                        var labels = res.data.map((x) => x.location); // Grab the location names from our data
+                        var data = res.data.map((x) => x.temp); // Grab the temperatures from our data
+
+                        var cxt = $("#chart"); // Grab the canvas the graph will be drawn on
+
+                        // Create the bar graph 
+                        var chart = new Chart(cxt, {
+                            type: "bar",
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: "Weather Info",
+                                    data: data
+                                }]
+                            }
+                        });
+                    });
+            };
+
+            // Emit an event to the server to export the data as json
+            $scope.export = function () {
+                $scope.isLoaded = false;
+                socket.emit("export");
+            };
+        });
+
+        // Displays a notification that the data has been written
+        socket.on("fileWritten", function () {
+            angular.element("#notification").fadeIn("slow");
+        });
+    </script>
+</body>
+
+</html>
